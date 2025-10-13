@@ -89,5 +89,5 @@ path = "tests/lib.rs"
 pulldown-cmark = "0.9.2"
 
 [patch.crates-io]
-bitcoin = { git = "https://github.com/PepeEnthusiast/rust-pepecoin" }
-bitcoincore-rpc = { git = "https://github.com/PepeEnthusiast/rust-pepecoincore-rpc" }
+bitcoin = { git = "https://github.com/lucky-degendev/rust-pepecoin" }
+bitcoincore-rpc = { git = "https://github.com/lucky-degendev/rust-pepecoincore-rpc" }
