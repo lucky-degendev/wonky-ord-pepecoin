@@ -16,12 +16,8 @@ pub(crate) struct AddressOutputJson {
 }
 
 impl AddressOutputJson {
-  pub fn new(
-    outputs: Vec<OutPoint>,
-  ) -> Self {
-    Self {
-      outpoint: outputs
-    }
+  pub fn new(outputs: Vec<OutPoint>) -> Self {
+    Self { outpoint: outputs }
   }
 }
 
@@ -51,9 +47,9 @@ impl OutputJson {
   ) -> Self {
     Self {
       address: chain
-          .address_from_script(&output.script_pubkey)
-          .ok()
-          .map(|address| address.to_string()),
+        .address_from_script(&output.script_pubkey)
+        .ok()
+        .map(|address| address.to_string()),
       inscriptions,
       dunes,
       script_pubkey: output.script_pubkey.asm(),

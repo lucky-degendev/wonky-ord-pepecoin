@@ -68,10 +68,7 @@ impl Chain {
     bitcoin::consensus::deserialize(&genesis_buf).unwrap()
   }
 
-  pub(crate) fn address_from_script(
-    self,
-    script: &Script,
-  ) -> Result<Address, address::Error> {
+  pub(crate) fn address_from_script(self, script: &Script) -> Result<Address, address::Error> {
     Address::from_script(script, self.network())
   }
 

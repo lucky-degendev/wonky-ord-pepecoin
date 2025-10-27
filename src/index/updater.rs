@@ -2,20 +2,22 @@ use bitcoincore_rpc::bitcoin::BlockHeader;
 
 use {
   self::{dune_updater::DuneUpdater, inscription_updater::InscriptionUpdater},
+  super::{fetcher::Fetcher, *},
   futures::future::try_join_all,
   std::sync::mpsc,
-  super::{*, fetcher::Fetcher},
   tokio::sync::mpsc::{error::TryRecvError, Receiver, Sender},
 };
 
 use crate::drc20::BlockContext;
 use crate::index::updater::drc20_updater::Drc20Updater;
+use crate::index::updater::pepemap_updater::{PepemapContext, PepemapUpdater};
 use crate::sat::Sat;
 use crate::sat_point::SatPoint;
 
 mod drc20_updater;
 mod dune_updater;
 mod inscription_updater;
+mod pepemap_updater;
 
 pub(crate) struct BlockData {
   pub(crate) header: BlockHeader,
@@ -407,13 +409,16 @@ impl<'index> Updater<'_> {
     let mut drc20_token_balance = wtx.open_table(DRC20_BALANCES)?;
     let mut drc20_inscribe_transfer = wtx.open_table(DRC20_INSCRIBE_TRANSFER)?;
     let mut drc20_transferable_log = wtx.open_table(DRC20_TRANSFERABLELOG)?;
+    let mut pepemap_number_to_entry = wtx.open_table(PEPEMAP_NUMBER_TO_ENTRY)?;
+    let mut pepemap_inscription_to_number = wtx.open_table(PEPEMAP_INSCRIPTION_TO_NUMBER)?;
+    let mut pepemap_owner_to_numbers = wtx.open_multimap_table(PEPEMAP_OWNER_TO_NUMBERS)?;
 
     let mut lost_sats = statistic_to_count
       .get(&Statistic::LostSats.key())?
       .map(|lost_sats| lost_sats.value())
       .unwrap_or(0);
 
-    {
+    let operations = {
       let mut inscription_updater = InscriptionUpdater::new(
         self.height,
         &mut inscription_id_to_satpoint,
@@ -534,30 +539,47 @@ impl<'index> Updater<'_> {
         }
       }
 
-      if index.index_drc20 && self.height >= index.first_inscription_height {
-        let operations = inscription_updater.operations.clone();
-
-        // Create a protocol manager to index the block of drc20 data.
-        Drc20Updater::new(
-          &mut drc20_token_info,
-          &mut drc20_token_balance,
-          &mut drc20_inscribe_transfer,
-          &mut drc20_transferable_log,
-          &inscription_id_to_inscription_entry,
-          &mut transaction_id_to_transaction,
-        )?
-        .index_block(
-          BlockContext {
-            network: index.chain.network(), 
-            blockheight: self.height as u64,
-            blocktime: block.header.time,
-          },
-          &block,
-          operations,
-        )?;
-      }
-
       statistic_to_count.insert(&Statistic::LostSats.key(), &lost_sats)?;
+      inscription_updater.operations.clone()
+    };
+
+    if index.index_drc20 && self.height >= index.first_inscription_height {
+      // Create a protocol manager to index the block of drc20 data.
+      Drc20Updater::new(
+        &mut drc20_token_info,
+        &mut drc20_token_balance,
+        &mut drc20_inscribe_transfer,
+        &mut drc20_transferable_log,
+        &inscription_id_to_inscription_entry,
+        &mut transaction_id_to_transaction,
+      )?
+      .index_block(
+        BlockContext {
+          network: index.chain.network(),
+          blockheight: self.height as u64,
+          blocktime: block.header.time,
+        },
+        &block,
+        operations.clone(),
+      )?;
+    }
+
+    if index.index_pepemaps && self.height >= index.first_inscription_height {
+      PepemapUpdater::new(
+        &mut pepemap_number_to_entry,
+        &mut pepemap_inscription_to_number,
+        &mut pepemap_owner_to_numbers,
+        &mut transaction_id_to_transaction,
+      )?
+      .index_block(
+        PepemapContext {
+          network: index.chain.network(),
+          block_height: self.height,
+          block_time: block.header.time,
+        },
+        &block,
+        operations,
+      )?;
     }
 
     if index.index_dunes && self.height >= self.index.first_dune_height {

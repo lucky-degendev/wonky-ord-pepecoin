@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use bitcoin::{Network, Txid};
 use redb::{ReadableTable, Table};
 
-use crate::drc20::operation::{Action, deserialize_drc20_operation, InscriptionOp, Operation};
+use crate::drc20::operation::{deserialize_drc20_operation, Action, InscriptionOp, Operation};
 use crate::drc20::transfer::Transfer;
 use crate::drc20::TransferInfo;
 use crate::inscription::Inscription;

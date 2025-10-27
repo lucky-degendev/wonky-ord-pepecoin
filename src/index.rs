@@ -8,11 +8,12 @@ use {
     reorg::*,
     updater::Updater,
   },
-  bitcoin::BlockHeader,
-  bitcoincore_rpc::{Auth, Client, json::GetBlockHeaderResult},
-  chrono::SubsecRound,
+  super::*,
   crate::inscription::ParsedInscription,
   crate::wallet::Wallet,
+  bitcoin::BlockHeader,
+  bitcoincore_rpc::{json::GetBlockHeaderResult, Auth, Client},
+  chrono::SubsecRound,
   indicatif::{ProgressBar, ProgressStyle},
   log::log_enabled,
   redb::{
@@ -22,14 +23,14 @@ use {
   std::collections::HashMap,
   std::io::Cursor,
   std::sync::atomic::{self, AtomicBool},
-  super::*,
   url::Url,
 };
 
-use crate::drc20::{
-  Balance, max_script_tick_key, min_script_tick_key, script_tick_key, Tick, TokenInfo,
-};
 use crate::drc20::script_key::ScriptKey;
+use crate::drc20::{
+  max_script_tick_key, min_script_tick_key, script_tick_key, Balance, Tick, TokenInfo,
+};
+use crate::pepemap::PepemapEntry;
 use crate::sat::Sat;
 use crate::sat_point::SatPoint;
 use crate::templates::BlockHashAndConfirmations;
@@ -37,12 +38,12 @@ use crate::templates::BlockHashAndConfirmations;
 pub(crate) use self::entry::DuneEntry;
 
 mod entry;
-mod reorg;
 mod fetcher;
+mod reorg;
 mod rtx;
 mod updater;
 
-const SCHEMA_VERSION: u64 = 6;
+const SCHEMA_VERSION: u64 = 7;
 
 macro_rules! define_table {
   ($name:ident, $key:ty, $value:ty) => {
@@ -82,6 +83,9 @@ define_table! { DRC20_BALANCES, &str, &[u8] }
 define_table! { DRC20_TOKEN, &str, &[u8] }
 define_table! { DRC20_INSCRIBE_TRANSFER, &[u8; 36], &[u8] }
 define_table! { DRC20_TRANSFERABLELOG, &str, &[u8] }
+define_table! { PEPEMAP_NUMBER_TO_ENTRY, u32, &[u8] }
+define_table! { PEPEMAP_INSCRIPTION_TO_NUMBER, &InscriptionIdValue, u32 }
+define_multimap_table! { PEPEMAP_OWNER_TO_NUMBERS, &[u8], u32 }
 
 pub(crate) struct Index {
   auth: Auth,
@@ -95,6 +99,7 @@ pub(crate) struct Index {
   height_limit: Option<u32>,
   index_drc20: bool,
   index_dunes: bool,
+  index_pepemaps: bool,
   index_sats: bool,
   index_transactions: bool,
   unrecoverably_reorged: AtomicBool,
@@ -114,6 +119,7 @@ pub(crate) enum List {
 pub(crate) enum Statistic {
   Commits,
   IndexDrc20,
+  IndexPepemaps,
   IndexDunes,
   IndexSats,
   LostSats,
@@ -225,6 +231,7 @@ impl Index {
 
     let index_drc20;
     let index_dunes;
+    let index_pepemaps;
     let index_sats;
     let index_transactions;
 
@@ -274,6 +281,11 @@ impl Index {
             .unwrap()
             .value()
             != 0;
+          index_pepemaps = statistics
+            .get(&Statistic::IndexPepemaps.key())?
+            .unwrap()
+            .value()
+            != 0;
         }
 
         database
@@ -317,6 +329,9 @@ impl Index {
         tx.open_table(SAT_TO_INSCRIPTION_ID)?;
         tx.open_table(SAT_TO_SATPOINT)?;
         tx.open_table(WRITE_TRANSACTION_STARTING_BLOCK_COUNT_TO_TIMESTAMP)?;
+        tx.open_table(PEPEMAP_NUMBER_TO_ENTRY)?;
+        tx.open_table(PEPEMAP_INSCRIPTION_TO_NUMBER)?;
+        tx.open_multimap_table(PEPEMAP_OWNER_TO_NUMBERS)?;
 
         {
           let mut outpoint_to_sat_ranges = tx.open_table(OUTPOINT_TO_SAT_RANGES)?;
@@ -326,14 +341,17 @@ impl Index {
             outpoint_to_sat_ranges.insert(&OutPoint::null().store(), [].as_slice())?;
           }
 
-          index_drc20 = options.index_dunes();
+          index_drc20 = options.index_drc20;
           index_dunes = options.index_dunes();
+          index_pepemaps = options.index_pepemaps();
           index_sats = options.index_sats;
           index_transactions = options.index_transactions;
 
           statistics.insert(&Statistic::IndexDrc20.key(), &u64::from(index_drc20))?;
 
           statistics.insert(&Statistic::IndexDunes.key(), &u64::from(index_dunes))?;
+
+          statistics.insert(&Statistic::IndexPepemaps.key(), &u64::from(index_pepemaps))?;
 
           statistics.insert(&Statistic::IndexSats.key(), &u64::from(index_sats))?;
 
@@ -367,6 +385,7 @@ impl Index {
       height_limit: options.height_limit,
       index_drc20,
       index_dunes,
+      index_pepemaps,
       index_sats,
       index_transactions,
       unrecoverably_reorged: AtomicBool::new(false),
@@ -506,22 +525,22 @@ impl Index {
         Err(err) => {
           log::info!("{}", err.to_string());
 
-            match err.downcast_ref() {
-              Some(&ReorgError::Recoverable { height, depth }) => {
-                Reorg::handle_reorg(self, height, depth)?;
+          match err.downcast_ref() {
+            Some(&ReorgError::Recoverable { height, depth }) => {
+              Reorg::handle_reorg(self, height, depth)?;
 
-                updater = Updater::new(self)?;
-              }
-              Some(&ReorgError::Unrecoverable) => {
-                self
-                  .unrecoverably_reorged
-                  .store(true, atomic::Ordering::Relaxed);
-                return Err(anyhow!(ReorgError::Unrecoverable));
-              }
-              _ => return Err(err),
-            };
-          }
+              updater = Updater::new(self)?;
+            }
+            Some(&ReorgError::Unrecoverable) => {
+              self
+                .unrecoverably_reorged
+                .store(true, atomic::Ordering::Relaxed);
+              return Err(anyhow!(ReorgError::Unrecoverable));
+            }
+            _ => return Err(err),
+          };
         }
+      }
     }
   }
 
@@ -952,6 +971,73 @@ impl Index {
     } else {
       return Ok(vec![]);
     }
+  }
+
+  pub(crate) fn get_pepemap(&self, number: u32) -> Result<Option<PepemapEntry>> {
+    if self.block_count().unwrap() < self.first_inscription_height {
+      return Ok(None);
+    }
+
+    let rtx = self.database.begin_read()?;
+    let table = rtx.open_table(PEPEMAP_NUMBER_TO_ENTRY)?;
+
+    let entry = table.get(&number)?;
+    entry
+      .map(|value| {
+        bincode::deserialize::<PepemapEntry>(value.value())
+          .map_err(|err| anyhow!("failed to decode pepemap entry: {err}"))
+      })
+      .transpose()
+  }
+
+  pub(crate) fn list_pepemaps(&self, limit: usize, offset: usize) -> Result<Vec<PepemapEntry>> {
+    if self.block_count().unwrap() < self.first_inscription_height {
+      return Ok(Vec::new());
+    }
+
+    let rtx = self.database.begin_read()?;
+    let table = rtx.open_table(PEPEMAP_NUMBER_TO_ENTRY)?;
+    let mut items = Vec::new();
+
+    for (idx, result) in table.iter()?.enumerate() {
+      let (_, value) = result?;
+      if idx < offset {
+        continue;
+      }
+      if items.len() >= limit {
+        break;
+      }
+
+      let entry: PepemapEntry = bincode::deserialize(value.value())
+        .map_err(|err| anyhow!("failed to decode pepemap entry: {err}"))?;
+      items.push(entry);
+    }
+
+    Ok(items)
+  }
+
+  pub(crate) fn get_pepemaps_by_owner(&self, owner: &ScriptKey) -> Result<Vec<PepemapEntry>> {
+    if self.block_count().unwrap() < self.first_inscription_height {
+      return Ok(Vec::new());
+    }
+
+    let rtx = self.database.begin_read()?;
+    let table = rtx.open_table(PEPEMAP_NUMBER_TO_ENTRY)?;
+    let owner_table = rtx.open_multimap_table(PEPEMAP_OWNER_TO_NUMBERS)?;
+    let owner_key = owner.to_string();
+    let mut entries = Vec::new();
+
+    for result in owner_table.get(owner_key.as_bytes())? {
+      let entry = result?;
+      let number = entry.value();
+      if let Some(raw_entry) = table.get(number)? {
+        let decoded: PepemapEntry = bincode::deserialize(raw_entry.value())
+          .map_err(|err| anyhow!("failed to decode pepemap entry: {err}"))?;
+        entries.push(decoded);
+      }
+    }
+
+    Ok(entries)
   }
 
   pub(crate) fn get_etching(&self, txid: Txid) -> Result<Option<SpacedDune>> {
@@ -1548,9 +1634,9 @@ impl Index {
 #[cfg(test)]
 mod tests {
   use {
-    bitcoin::secp256k1::rand::{self, RngCore},
-    crate::index::testing::Context,
     super::*,
+    crate::index::testing::Context,
+    bitcoin::secp256k1::rand::{self, RngCore},
   };
 
   #[test]
@@ -2836,8 +2922,8 @@ mod tests {
       context.mine_blocks(6);
 
       context
-          .index
-          .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
+        .index
+        .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
 
       let txid = context.rpc_server.broadcast_tx(TransactionTemplate {
         inputs: &[(2, 0, 0)],
@@ -2853,15 +2939,15 @@ mod tests {
       context.mine_blocks(1);
 
       context
-          .index
-          .assert_inscription_location(second_id, second_location, Some(100 * COIN_VALUE));
+        .index
+        .assert_inscription_location(second_id, second_location, Some(100 * COIN_VALUE));
 
       context.rpc_server.invalidate_tip();
       context.mine_blocks(2);
 
       context
-          .index
-          .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
+        .index
+        .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
 
       context.index.assert_non_existence_of_inscription(second_id);
     }
@@ -2899,8 +2985,8 @@ mod tests {
       context.mine_blocks(1);
 
       context
-          .index
-          .assert_inscription_location(second_id, second_location, Some(100 * COIN_VALUE));
+        .index
+        .assert_inscription_location(second_id, second_location, Some(100 * COIN_VALUE));
 
       context.rpc_server.invalidate_tip();
       context.rpc_server.invalidate_tip();
@@ -2915,8 +3001,8 @@ mod tests {
       context.mine_blocks(2);
 
       context
-          .index
-          .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
+        .index
+        .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
     }
   }
 
@@ -2954,8 +3040,8 @@ mod tests {
       context.mine_blocks(7);
 
       context
-          .index
-          .assert_inscription_location(second_id, second_location, Some(100 * COIN_VALUE));
+        .index
+        .assert_inscription_location(second_id, second_location, Some(100 * COIN_VALUE));
 
       for _ in 0..7 {
         context.rpc_server.invalidate_tip();
@@ -2966,8 +3052,8 @@ mod tests {
       context.index.assert_non_existence_of_inscription(second_id);
 
       context
-          .index
-          .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
+        .index
+        .assert_inscription_location(first_id, first_location, Some(50 * COIN_VALUE));
     }
   }
 }

@@ -32,17 +32,15 @@
 //! method that the built transaction is correct with respect to the feature,
 //! and a test that the assertion fires as expected.
 
+use crate::sat_point::SatPoint;
 use {
   super::*,
   bitcoin::{
     blockdata::{locktime::PackedLockTime, witness::Witness},
-    Amount
+    Amount,
   },
-  std::{
-    collections::{BTreeMap, BTreeSet},
-  },
+  std::collections::{BTreeMap, BTreeSet},
 };
-use crate::sat_point::SatPoint;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -654,8 +652,7 @@ impl TransactionBuilder {
     let dunic_utxos = self.dunic_utxos.clone();
 
     for utxo in &self.utxos {
-      if inscribed_utxos.contains(utxo) ||
-          dunic_utxos.contains(utxo) {
+      if inscribed_utxos.contains(utxo) || dunic_utxos.contains(utxo) {
         continue;
       }
 

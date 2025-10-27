@@ -1,8 +1,8 @@
+use crate::dunes::CLAIM_BIT;
 use {
   super::*,
-  crate::dunes::{varint, Edict, Dunestone},
+  crate::dunes::{varint, Dunestone, Edict},
 };
-use crate::dunes::CLAIM_BIT;
 
 fn claim(id: u128) -> Option<u128> {
   (id & CLAIM_BIT != 0).then_some(id ^ CLAIM_BIT)
@@ -24,7 +24,7 @@ pub(super) struct DuneUpdater<'a, 'db, 'tx> {
   height: u32,
   id_to_entry: &'a mut Table<'db, 'tx, DuneIdValue, DuneEntryValue>,
   inscription_id_to_inscription_entry:
-  &'a Table<'db, 'tx, &'static InscriptionIdValue, InscriptionEntryValue>,
+    &'a Table<'db, 'tx, &'static InscriptionIdValue, InscriptionEntryValue>,
   inscription_id_to_dune: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, u128>,
   minimum: Dune,
   outpoint_to_balances: &'a mut Table<'db, 'tx, &'static OutPointValue, &'static [u8]>,
@@ -52,9 +52,9 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
     minimum: Dune,
   ) -> Result<Self> {
     let dunes = statistic_to_count
-        .get(&Statistic::Dunes.into())?
-        .map(|x| x.value())
-        .unwrap_or(0);
+      .get(&Statistic::Dunes.into())?
+      .map(|x| x.value())
+      .unwrap_or(0);
     Ok(Self {
       height,
       id_to_entry,
@@ -94,14 +94,14 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
     }
 
     let cenotaph = dunestone
-        .as_ref()
-        .map(|dunestone| dunestone.cenotaph)
-        .unwrap_or_default();
+      .as_ref()
+      .map(|dunestone| dunestone.cenotaph)
+      .unwrap_or_default();
 
     let default_output = dunestone.as_ref().and_then(|dunestone| {
       dunestone
-          .pointer
-          .and_then(|default| usize::try_from(default).ok())
+        .pointer
+        .and_then(|default| usize::try_from(default).ok())
     });
 
     // A vector of allocated transaction output dune balances
@@ -112,10 +112,10 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
       let mut allocation = match dunestone.etching {
         Some(etching) => {
           if etching
-              .dune
-              .map(|dune| dune < self.minimum || dune.is_reserved())
-              .unwrap_or_default()
-              || etching
+            .dune
+            .map(|dune| dune < self.minimum || dune.is_reserved())
+            .unwrap_or_default()
+            || etching
               .dune
               .and_then(|dune| self.dune_to_id.get(dune.0).transpose())
               .transpose()?
@@ -127,14 +127,14 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
               dune
             } else {
               let reserved_dunes = self
-                  .statistic_to_count
-                  .get(&Statistic::ReservedDunes.into())?
-                  .map(|entry| entry.value())
-                  .unwrap_or_default();
+                .statistic_to_count
+                .get(&Statistic::ReservedDunes.into())?
+                .map(|entry| entry.value())
+                .unwrap_or_default();
 
               self
-                  .statistic_to_count
-                  .insert(&Statistic::ReservedDunes.into(), reserved_dunes + 1)?;
+                .statistic_to_count
+                .insert(&Statistic::ReservedDunes.into(), reserved_dunes + 1)?;
 
               Dune::reserved(reserved_dunes.into())
             };
@@ -161,15 +161,11 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
                 }),
                 turbo: etching.turbo,
               }),
-              Err(_) => {
-                None
-              },
+              Err(_) => None,
             }
           }
         }
-        None => {
-          None
-        },
+        None => None,
       };
 
       let mut premine_amount = 0;
@@ -178,10 +174,10 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
         let mut mintable: HashMap<u128, u128> = HashMap::new();
 
         let mut claims = dunestone
-            .edicts
-            .iter()
-            .filter_map(|edict| claim(edict.id))
-            .collect::<Vec<u128>>();
+          .edicts
+          .iter()
+          .filter_map(|edict| claim(edict.id))
+          .collect::<Vec<u128>>();
         claims.sort();
         claims.dedup();
         for id in claims {
@@ -217,7 +213,7 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
               Some(Allocation { balance, id, .. }) => {
                 premine_amount = premine_amount + amount;
                 (balance, *id)
-              },
+              }
               None => continue,
             }
           } else if let Some(claim) = claim(id) {
@@ -243,13 +239,13 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
           if output == tx.output.len() {
             // find non-OP_RETURN outputs
             let destinations = tx
-                .output
-                .iter()
-                .enumerate()
-                .filter_map(|(output, tx_out)| {
-                  (!tx_out.script_pubkey.is_op_return()).then_some(output)
-                })
-                .collect::<Vec<usize>>();
+              .output
+              .iter()
+              .enumerate()
+              .filter_map(|(output, tx_out)| {
+                (!tx_out.script_pubkey.is_op_return()).then_some(output)
+              })
+              .collect::<Vec<usize>>();
 
             if amount == 0 {
               // if amount is zero, divide balance between eligible outputs
@@ -312,8 +308,8 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
         self.dunes += 1;
 
         self
-            .statistic_to_count
-            .insert(&Statistic::Dunes.into(), self.dunes)?;
+          .statistic_to_count
+          .insert(&Statistic::Dunes.into(), self.dunes)?;
 
         self.id_to_entry.insert(
           id.store(),
@@ -333,19 +329,19 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
             timestamp: self.timestamp.into(),
             turbo,
           }
-              .store(),
+          .store(),
         )?;
 
         let inscription_id = InscriptionId { txid, index: 0 };
 
         if self
-            .inscription_id_to_inscription_entry
-            .get(&inscription_id.store())?
-            .is_some()
+          .inscription_id_to_inscription_entry
+          .get(&inscription_id.store())?
+          .is_some()
         {
           self
-              .inscription_id_to_dune
-              .insert(&inscription_id.store(), dune.0)?;
+            .inscription_id_to_dune
+            .insert(&inscription_id.store(), dune.0)?;
         }
       }
     }
@@ -361,14 +357,14 @@ impl<'a, 'db, 'tx> DuneUpdater<'a, 'db, 'tx> {
       // OP_RETURN output if there is no default, or if the default output is
       // too large
       if let Some(vout) = default_output
-          .filter(|vout| *vout < allocated.len())
-          .or_else(|| {
-            tx.output
-                .iter()
-                .enumerate()
-                .find(|(_vout, tx_out)| !tx_out.script_pubkey.is_op_return())
-                .map(|(vout, _tx_out)| vout)
-          })
+        .filter(|vout| *vout < allocated.len())
+        .or_else(|| {
+          tx.output
+            .iter()
+            .enumerate()
+            .find(|(_vout, tx_out)| !tx_out.script_pubkey.is_op_return())
+            .map(|(vout, _tx_out)| vout)
+        })
       {
         for (id, balance) in unallocated {
           if balance > 0 {

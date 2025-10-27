@@ -22,7 +22,10 @@ pub(crate) struct Options {
   pub(crate) config_dir: Option<PathBuf>,
   #[arg(long, help = "Load Dogecoin Core RPC cookie file from <COOKIE_FILE>.")]
   pub(crate) cookie_file: Option<PathBuf>,
-  #[arg(long, help = "Use <CSP_ORIGIN> in Content-Security-Policy header. Set this to the public-facing URL of your ord instance.")]
+  #[arg(
+    long,
+    help = "Use <CSP_ORIGIN> in Content-Security-Policy header. Set this to the public-facing URL of your ord instance."
+  )]
   pub(crate) csp_origin: Option<String>,
   #[arg(long, help = "Store index in <DATA_DIR>.")]
   pub(crate) data_dir: Option<PathBuf>,
@@ -36,10 +39,7 @@ pub(crate) struct Options {
     help = "Don't look for inscriptions below <FIRST_INSCRIPTION_HEIGHT>."
   )]
   pub(crate) first_inscription_height: Option<u32>,
-  #[arg(
-  long,
-  help = "Don't look for dunes below <FIRST_DUNE_HEIGHT>."
-  )]
+  #[arg(long, help = "Don't look for dunes below <FIRST_DUNE_HEIGHT>.")]
   pub(crate) first_dune_height: Option<u32>,
   #[arg(long, help = "Limit index to <HEIGHT_LIMIT> blocks.")]
   pub(crate) height_limit: Option<u32>,
@@ -47,9 +47,11 @@ pub(crate) struct Options {
   pub(crate) index: Option<PathBuf>,
   #[arg(long, help = "Track drc20 tokens and balances.")]
   pub(crate) index_drc20: bool,
+  #[arg(long, help = "Track Pepemap claims and transfers.")]
+  pub(crate) index_pepemaps: bool,
   #[arg(
-  long,
-  help = "Track location of dunes. DUNES ARE IN AN UNFINISHED PRE-ALPHA STATE AND SUBJECT TO CHANGE AT ANY TIME."
+    long,
+    help = "Track location of dunes. DUNES ARE IN AN UNFINISHED PRE-ALPHA STATE AND SUBJECT TO CHANGE AT ANY TIME."
   )]
   pub(crate) index_dunes: bool,
   #[arg(long, help = "Track location of all satoshis.")]
@@ -60,10 +62,7 @@ pub(crate) struct Options {
   pub(crate) regtest: bool,
   #[arg(long, help = "Connect to Dogecoin Core RPC at <RPC_URL>.")]
   pub(crate) rpc_url: Option<String>,
-  #[arg(
-  long,
-  help = "Number of parallel requests to dogecoin node."
-  )]
+  #[arg(long, help = "Number of parallel requests to dogecoin node.")]
   pub(crate) nr_parallel_requests: Option<usize>,
   #[arg(long, short, help = "Use signet. Equivalent to `--chain signet`.")]
   pub(crate) signet: bool,
@@ -109,13 +108,17 @@ impl Options {
       0
     } else {
       self
-          .first_dune_height
-          .unwrap_or_else(|| self.chain().first_dune_height())
+        .first_dune_height
+        .unwrap_or_else(|| self.chain().first_dune_height())
     }
   }
 
   pub(crate) fn index_dunes(&self) -> bool {
     self.index_dunes
+  }
+
+  pub(crate) fn index_pepemaps(&self) -> bool {
+    self.index_pepemaps
   }
 
   pub(crate) fn rpc_url(&self) -> String {
@@ -659,15 +662,12 @@ mod tests {
     .unwrap()
     .options
     .index_dunes(),);
-    assert!(!Arguments::try_parse_from([
-      "ord",
-      "--index-dunes",
-      "index",
-      "update"
-    ])
-    .unwrap()
-    .options
-    .index_dunes(),);
+    assert!(
+      !Arguments::try_parse_from(["ord", "--index-dunes", "index", "update"])
+        .unwrap()
+        .options
+        .index_dunes(),
+    );
     assert!(!Arguments::try_parse_from(["ord", "index", "update"])
       .unwrap()
       .options

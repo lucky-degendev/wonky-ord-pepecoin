@@ -1,7 +1,7 @@
+use super::*;
 use crate::dunes::MintError;
 use crate::sat::Sat;
 use crate::sat_point::SatPoint;
-use super::*;
 
 pub(super) trait Entry: Sized {
   type Value;
@@ -58,18 +58,18 @@ pub(crate) struct DuneEntry {
 }
 
 pub(super) type DuneEntryValue = (
-  u64,                      // block
-  u128,                     // burned
-  u8,                       // divisibility
-  (u128, u128),             // etching
-  Option<TermsEntryValue>,  // terms parameters
-  u128,                     // mints
-  u64,                      // number
-  (u128, u32),              // dune + spacers
-  (u128, u128),             // supply + premine
-  u32,                      // symbol
-  u64,                      // timestamp
-  bool                      // turbo
+  u64,                     // block
+  u128,                    // burned
+  u8,                      // divisibility
+  (u128, u128),            // etching
+  Option<TermsEntryValue>, // terms parameters
+  u128,                    // mints
+  u64,                     // number
+  (u128, u32),             // dune + spacers
+  (u128, u128),            // supply + premine
+  u32,                     // symbol
+  u64,                     // timestamp
+  bool,                    // turbo
 );
 
 type TermsEntryValue = (
@@ -129,40 +129,38 @@ impl DuneEntry {
     let terms = self.terms?;
 
     let relative = terms
-        .offset
-        .0
-        .map(|offset| self.block.saturating_add(offset));
+      .offset
+      .0
+      .map(|offset| self.block.saturating_add(offset));
 
     let absolute = terms.height.0;
 
     relative
-        .zip(absolute)
-        .map(|(relative, absolute)| relative.max(absolute))
-        .or(relative)
-        .or(absolute)
+      .zip(absolute)
+      .map(|(relative, absolute)| relative.max(absolute))
+      .or(relative)
+      .or(absolute)
   }
 
   pub fn end(&self) -> Option<u64> {
     let terms = self.terms?;
 
     let relative = terms
-        .offset
-        .1
-        .map(|offset| self.block.saturating_add(offset));
+      .offset
+      .1
+      .map(|offset| self.block.saturating_add(offset));
 
     let absolute = terms.height.1;
 
     relative
-        .zip(absolute)
-        .map(|(relative, absolute)| relative.min(absolute))
-        .or(relative)
-        .or(absolute)
+      .zip(absolute)
+      .map(|(relative, absolute)| relative.min(absolute))
+      .or(relative)
+      .or(absolute)
   }
 
   pub fn supply(&self) -> u128 {
-    self.premine
-        + self.supply
-        + self.burned
+    self.premine + self.supply + self.burned
   }
 }
 
@@ -217,7 +215,8 @@ impl Entry for DuneEntry {
       symbol,
       timestamp,
       turbo,
-    ): DuneEntryValue,) -> Self {
+    ): DuneEntryValue,
+  ) -> Self {
     Self {
       block,
       burned,
@@ -258,7 +257,7 @@ impl Entry for DuneEntry {
             let mut array = [0; 32];
             array.copy_from_slice(&bytes_vec);
             array
-          },
+          }
           _ => panic!("Vector length is not 32"),
         };
         (
@@ -274,7 +273,7 @@ impl Entry for DuneEntry {
       },
       self.terms.map(
         |Terms {
-          cap,
+           cap,
            limit,
            height,
            offset,
@@ -286,7 +285,7 @@ impl Entry for DuneEntry {
       (self.supply, self.premine),
       self.symbol.map(u32::from).unwrap_or(u32::MAX),
       self.timestamp,
-      self.turbo
+      self.turbo,
     )
   }
 }
@@ -383,8 +382,7 @@ pub(crate) type OutPointMapValue = (u64, [u8; 34]);
 impl Entry for OutPointMap {
   type Value = OutPointMapValue;
 
-  fn load(value: Self::Value,
-  ) -> Self {
+  fn load(value: Self::Value) -> Self {
     Self {
       value: value.0,
       address: value.1,
@@ -392,10 +390,7 @@ impl Entry for OutPointMap {
   }
 
   fn store(self) -> Self::Value {
-    (
-      self.value,
-      self.address,
-    )
+    (self.value, self.address)
   }
 }
 

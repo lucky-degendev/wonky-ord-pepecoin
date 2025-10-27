@@ -143,7 +143,7 @@ mod tests {
         divisibility: 0,
         symbol: Some('$'),
       }
-          .to_string(),
+      .to_string(),
       "0\u{00A0}$"
     );
   }

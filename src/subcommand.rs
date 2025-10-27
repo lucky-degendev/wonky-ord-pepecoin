@@ -1,6 +1,7 @@
 use super::*;
 
 pub mod balances;
+pub mod dunes;
 pub mod epochs;
 pub mod find;
 mod index;
@@ -8,7 +9,6 @@ pub mod info;
 pub mod list;
 pub mod parse;
 mod preview;
-pub mod dunes;
 mod server;
 pub mod subsidy;
 pub mod traits;
@@ -83,8 +83,8 @@ pub(crate) trait Output: Send {
 }
 
 impl<T> Output for T
-  where
-      T: Serialize + Send,
+where
+  T: Serialize + Send,
 {
   fn print_json(&self) {
     serde_json::to_writer_pretty(io::stdout(), self).ok();

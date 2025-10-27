@@ -13,6 +13,8 @@ pub struct Output {
 
 impl Parse {
   pub(crate) fn run(self) -> SubcommandResult {
-    Ok(Box::new(Output { object: self.object }))
+    Ok(Box::new(Output {
+      object: self.object,
+    }))
   }
 }

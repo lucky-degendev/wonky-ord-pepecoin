@@ -16,9 +16,7 @@ pub struct Output {
 
 impl Send {
   pub(crate) fn run(self, options: Options) -> SubcommandResult {
-    let address = self
-        .address
-        .clone();
+    let address = self.address.clone();
 
     let index = Index::open(&options)?;
     index.update()?;
@@ -30,7 +28,7 @@ impl Send {
     let inscriptions = index.get_inscriptions(None)?;
 
     let dunic_outputs =
-        index.get_dunic_outputs(&unspent_outputs.keys().cloned().collect::<Vec<OutPoint>>())?;
+      index.get_dunic_outputs(&unspent_outputs.keys().cloned().collect::<Vec<OutPoint>>())?;
 
     let satpoint = match self.outgoing {
       Outgoing::Amount(amount) => {
@@ -38,8 +36,8 @@ impl Send {
         return Ok(Box::new(Output { transaction }));
       }
       Outgoing::InscriptionId(id) => index
-          .get_inscription_satpoint_by_id(id)?
-          .ok_or_else(|| anyhow!("inscription {id} not found"))?,
+        .get_inscription_satpoint_by_id(id)?
+        .ok_or_else(|| anyhow!("inscription {id} not found"))?,
       Outgoing::Dune { decimal, dune } => {
         let transaction = Self::send_dunes(
           address,
@@ -133,15 +131,15 @@ impl Send {
     );
 
     let (id, entry) = index
-        .dune(spaced_dune.dune)?
-        .with_context(|| format!("dune `{}` has not been etched", spaced_dune.dune))?;
+      .dune(spaced_dune.dune)?
+      .with_context(|| format!("dune `{}` has not been etched", spaced_dune.dune))?;
 
     let amount = decimal.to_amount(entry.divisibility)?;
 
     let inscribed_outputs = inscriptions
-        .keys()
-        .map(|satpoint| satpoint.outpoint)
-        .collect::<HashSet<OutPoint>>();
+      .keys()
+      .map(|satpoint| satpoint.outpoint)
+      .collect::<HashSet<OutPoint>>();
 
     let mut input_dunes = 0;
     let mut input = Vec::new();
@@ -187,14 +185,14 @@ impl Send {
       version: 1,
       lock_time: PackedLockTime::ZERO,
       input: input
-          .into_iter()
-          .map(|previous_output| TxIn {
-            previous_output,
-            script_sig: Script::new(),
-            sequence: Sequence::MAX,
-            witness: Witness::new(),
-          })
-          .collect(),
+        .into_iter()
+        .map(|previous_output| TxIn {
+          previous_output,
+          script_sig: Script::new(),
+          sequence: Sequence::MAX,
+          witness: Witness::new(),
+        })
+        .collect(),
       output: vec![
         TxOut {
           script_pubkey: dunestone.encipher(),
@@ -214,8 +212,8 @@ impl Send {
     let unsigned_transaction = fund_raw_transaction(client, fee_rate, &unfunded_transaction)?;
 
     let signed_transaction = client
-        .sign_raw_transaction_with_wallet(&unsigned_transaction, None, None)?
-        .hex;
+      .sign_raw_transaction_with_wallet(&unsigned_transaction, None, None)?
+      .hex;
 
     Ok(client.send_raw_transaction(&signed_transaction)?)
   }

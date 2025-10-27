@@ -70,7 +70,7 @@ impl PageContent for DuneHtml {
 
 #[cfg(test)]
 mod tests {
-  use {crate::dunes::Dune, super::*};
+  use {super::*, crate::dunes::Dune};
 
   #[test]
   fn display() {

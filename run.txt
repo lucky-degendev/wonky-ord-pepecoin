@@ -1,0 +1,27 @@
+./target/release/ord \
+  --rpc-url=http://luckylucker:Passkey123@127.0.0.1:33873 \
+  --data-dir=/mnt/ord-node/indexer-data-main \
+  --first-inscription-height=0 \
+  --first-dune-height=0 \
+  --index-dunes \
+  --index-transactions \
+  --index-drc20 \
+  --index-pepemaps \
+  server \
+  --address 0.0.0.0 \
+  --http-port 7778
+
+nohup ./target/release/ord \
+  --rpc-url=http://luckylucker:Passkey123@127.0.0.1:33873 \
+  --data-dir=/mnt/ord-node/indexer-data-main \
+  --first-inscription-height=0 \
+  --first-dune-height=0 \
+  --index-dunes \
+  --index-transactions \
+  --index-drc20 \
+  --index-pepemaps \
+  server \
+  --address 0.0.0.0 \
+  --http-port 7777 \
+  >ord.log 2>&1 &
+disown

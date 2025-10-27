@@ -1,5 +1,5 @@
-use {super::*, crate::wallet::Wallet};
 use crate::sat_point::SatPoint;
+use {super::*, crate::wallet::Wallet};
 
 #[derive(Serialize, Deserialize)]
 pub struct Output {

@@ -36,6 +36,7 @@ use {
     caches::DirCache,
     AcmeConfig,
   },
+  serde::Deserialize,
   serde_json::to_string,
   std::collections::HashMap,
   std::{cmp::Ordering, str},
@@ -49,6 +50,12 @@ use {
 
 mod error;
 mod query;
+
+#[derive(Deserialize)]
+struct PepemapListQuery {
+  limit: Option<usize>,
+  offset: Option<usize>,
+}
 
 // Helper function to get transaction details
 fn get_transaction_details(
@@ -319,6 +326,9 @@ impl Server {
           "/prc20/address/:address/balance",
           get(Self::drc20_all_balance),
         )
+        .route("/pepemap/:number", get(Self::pepemap_by_number))
+        .route("/pepemap/address/:address", get(Self::pepemap_by_address))
+        .route("/pepemap", get(Self::pepemap_index))
         .route("/dunes_on_outputs", get(Self::dunes_by_outputs))
         .route("/sat/:sat", get(Self::sat))
         .route("/search", get(Self::search_by_query))
@@ -1060,7 +1070,10 @@ impl Server {
       Address::from_str(&address).map_err(|err| ServerError::BadRequest(err.to_string()))?;
 
     let balance = index
-      .get_drc20_balance(&ScriptKey::from_address(address, index.chain.network()), &tick)
+      .get_drc20_balance(
+        &ScriptKey::from_address(address, index.chain.network()),
+        &tick,
+      )
       .map_err(|err| ServerError::BadRequest(err.to_string()))?;
 
     /*let available_balance = if let Some(balance) = balance
@@ -1092,6 +1105,49 @@ impl Server {
     };*/
 
     Ok(Json(balance).into_response())
+  }
+
+  async fn pepemap_by_number(
+    Extension(index): Extension<Arc<Index>>,
+    Path(number): Path<u32>,
+  ) -> Result<Response, ServerError> {
+    let entry = index
+      .get_pepemap(number)
+      .map_err(|err| ServerError::BadRequest(err.to_string()))?;
+
+    match entry {
+      Some(entry) => Ok(Json(entry).into_response()),
+      None => Err(ServerError::NotFound(format!("Pepemap {number} not found"))),
+    }
+  }
+
+  async fn pepemap_by_address(
+    Extension(index): Extension<Arc<Index>>,
+    Path(address): Path<String>,
+  ) -> Result<Response, ServerError> {
+    let address =
+      Address::from_str(&address).map_err(|err| ServerError::BadRequest(err.to_string()))?;
+    let script_key = ScriptKey::from_address(address, index.chain.network());
+
+    let entries = index
+      .get_pepemaps_by_owner(&script_key)
+      .map_err(|err| ServerError::BadRequest(err.to_string()))?;
+
+    Ok(Json(entries).into_response())
+  }
+
+  async fn pepemap_index(
+    Extension(index): Extension<Arc<Index>>,
+    Query(query): Query<PepemapListQuery>,
+  ) -> Result<Response, ServerError> {
+    let limit = query.limit.unwrap_or(100).min(500);
+    let offset = query.offset.unwrap_or(0);
+
+    let entries = index
+      .list_pepemaps(limit, offset)
+      .map_err(|err| ServerError::BadRequest(err.to_string()))?;
+
+    Ok(Json(entries).into_response())
   }
 
   async fn range(

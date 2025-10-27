@@ -10,6 +10,7 @@
   clippy::cast_sign_loss
 )]
 
+use crate::sat_point::SatPoint;
 use {
   self::{
     arguments::Arguments,
@@ -17,29 +18,29 @@ use {
     config::Config,
     decimal::Decimal,
     deserialize_from_str::DeserializeFromStr,
+    dunes::{Etching, Pile, SpacedDune},
     epoch::Epoch,
     height::Height,
-    index::{Index, List, DuneEntry},
+    index::{DuneEntry, Index, List},
     inscription::Inscription,
     inscription_id::InscriptionId,
-    tag::Tag,
     media::Media,
     options::Options,
     outgoing::Outgoing,
     representation::Representation,
-    dunes::{Etching, Pile, SpacedDune},
     sat::Sat,
     subcommand::Subcommand,
+    tag::Tag,
     tally::Tally,
   },
   anyhow::{anyhow, bail, ensure, Context, Error},
   bip39::Mnemonic,
   bitcoin::{
+    blockdata::opcodes,
+    blockdata::script::{self, Instruction},
     consensus::{self, Decodable, Encodable},
     hash_types::BlockHash,
     hashes::Hash,
-    blockdata::opcodes,
-    blockdata::script::{self, Instruction},
     Address, Amount, Block, Network, OutPoint, Script, Sequence, Transaction, TxIn, TxOut, Txid,
     Witness,
   },
@@ -48,7 +49,7 @@ use {
   chrono::{DateTime, TimeZone, Utc},
   clap::{ArgGroup, Parser},
   derive_more::{Display, FromStr},
-  drc20::{errors},
+  drc20::errors,
   html_escaper::{Escape, Trusted},
   lazy_static::lazy_static,
   regex::Regex,
@@ -77,11 +78,12 @@ use {
   tempfile::TempDir,
   tokio::{runtime::Runtime, task},
 };
-use crate::sat_point::SatPoint;
 
 pub use self::{
-  fee_rate::FeeRate, object::Object, rarity::Rarity,
-  dunes::{Edict, Dune, DuneId, Dunestone, Terms},
+  dunes::{Dune, DuneId, Dunestone, Edict, Terms},
+  fee_rate::FeeRate,
+  object::Object,
+  rarity::Rarity,
   subcommand::wallet::transaction_builder::{Target, TransactionBuilder},
 };
 
@@ -114,21 +116,22 @@ mod height;
 mod index;
 
 mod decimal_sat;
+mod drc20;
+mod dunes;
 mod inscription;
 mod inscription_id;
-mod tag;
 mod media;
 mod object;
 mod options;
 mod outgoing;
 mod page_config;
+mod pepemap;
 mod rarity;
 mod representation;
-mod drc20;
-mod dunes;
 mod sat;
 mod sat_point;
 pub mod subcommand;
+mod tag;
 mod tally;
 mod templates;
 mod wallet;
@@ -151,18 +154,18 @@ fn fund_raw_transaction(
 ) -> Result<Vec<u8>> {
   Ok(
     client
-        .fund_raw_transaction(
-          unfunded_transaction,
-          Some(&bitcoincore_rpc::json::FundRawTransactionOptions {
-            // NB. This is `fundrawtransaction`'s `feeRate`, which is fee per kvB
-            // and *not* fee per vB. So, we multiply the fee rate given by the user
-            // by 1000.
-            fee_rate: Some(Amount::from_sat((fee_rate.n() * 1000.0).ceil() as u64)),
-            ..Default::default()
-          }),
-          Some(false),
-        )?
-        .hex,
+      .fund_raw_transaction(
+        unfunded_transaction,
+        Some(&bitcoincore_rpc::json::FundRawTransactionOptions {
+          // NB. This is `fundrawtransaction`'s `feeRate`, which is fee per kvB
+          // and *not* fee per vB. So, we multiply the fee rate given by the user
+          // by 1000.
+          fee_rate: Some(Amount::from_sat((fee_rate.n() * 1000.0).ceil() as u64)),
+          ..Default::default()
+        }),
+        Some(false),
+      )?
+      .hex,
   )
 }
 
@@ -174,8 +177,8 @@ fn integration_test() -> bool {
 
 pub fn timestamp(seconds: u64) -> DateTime<Utc> {
   Utc
-      .timestamp_opt(seconds.try_into().unwrap_or(i64::MAX), 0)
-      .unwrap()
+    .timestamp_opt(seconds.try_into().unwrap_or(i64::MAX), 0)
+    .unwrap()
 }
 
 fn gracefully_shutdown_indexer() {

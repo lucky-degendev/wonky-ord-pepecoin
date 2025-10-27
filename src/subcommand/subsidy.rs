@@ -22,6 +22,9 @@ impl Subsidy {
       bail!("block {} has no subsidy", self.height);
     }
 
-    Ok(Box::new(Output { first: first.0, subsidy }))
+    Ok(Box::new(Output {
+      first: first.0,
+      subsidy,
+    }))
   }
 }

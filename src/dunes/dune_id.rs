@@ -34,8 +34,8 @@ impl FromStr for DuneId {
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     let (height, index) = s
-        .split_once(':')
-        .ok_or_else(|| anyhow!("invalid dune ID: {s}"))?;
+      .split_once(':')
+      .ok_or_else(|| anyhow!("invalid dune ID: {s}"))?;
 
     Ok(Self {
       height: height.parse()?,
@@ -46,8 +46,8 @@ impl FromStr for DuneId {
 
 impl Serialize for DuneId {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+  where
+    S: Serializer,
   {
     serializer.collect_str(self)
   }
@@ -55,8 +55,8 @@ impl Serialize for DuneId {
 
 impl<'de> Deserialize<'de> for DuneId {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+  where
+    D: Deserializer<'de>,
   {
     Ok(DeserializeFromStr::deserialize(deserializer)?.0)
   }

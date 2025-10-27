@@ -281,6 +281,76 @@ paths:
               schema:
                 type: object
 
+  /pepemap:
+    get:
+      summary: List Pepemap claims
+      operationId: listPepemaps
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of Pepemap entries to return
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+        - name: offset
+          in: query
+          required: false
+          description: Number of entries to skip
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Pepemap entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PepemapEntry'
+
+  /pepemap/{number}:
+    get:
+      summary: Get Pepemap entry by number
+      operationId: getPepemapByNumber
+      parameters:
+        - name: number
+          in: path
+          required: true
+          description: Block height claimed (Pepemap number)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Pepemap entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PepemapEntry'
+
+  /pepemap/address/{address}:
+    get:
+      summary: List Pepemaps owned by an address
+      operationId: listPepemapsByAddress
+      parameters:
+        - name: address
+          in: path
+          required: true
+          description: Address that owns Pepemaps
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pepemap entries for the address
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PepemapEntry'
+
   /dune/{dune}:
     get:
       summary: Get dune details
@@ -848,4 +918,18 @@ components:
           type: array
           items:
             type: string
-
+    PepemapEntry:
+      type: object
+      properties:
+        number:
+          type: integer
+        inscription_id:
+          type: string
+        txid:
+          type: string
+        owner:
+          type: string
+        block_height:
+          type: integer
+        block_time:
+          type: integer

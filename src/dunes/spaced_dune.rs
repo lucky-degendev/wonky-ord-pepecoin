@@ -62,8 +62,8 @@ impl Display for SpacedDune {
 
 impl Serialize for SpacedDune {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+  where
+    S: Serializer,
   {
     serializer.collect_str(self)
   }
@@ -71,8 +71,8 @@ impl Serialize for SpacedDune {
 
 impl<'de> Deserialize<'de> for SpacedDune {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+  where
+    D: Deserializer<'de>,
   {
     Ok(DeserializeFromStr::deserialize(deserializer)?.0)
   }

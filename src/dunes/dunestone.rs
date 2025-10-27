@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::*;
+use std::collections::HashMap;
 
 const MAX_SPACERS: u32 = 0b00000111_11111111_11111111_11111111;
 
@@ -10,7 +10,6 @@ pub struct Dunestone {
   pub pointer: Option<u32>,
   pub cenotaph: bool,
 }
-
 
 struct Message {
   cenotaph: bool,
@@ -47,7 +46,11 @@ impl Message {
       fields.entry(tag).or_insert(value);
     }
 
-    Self { cenotaph, fields, edicts }
+    Self {
+      cenotaph,
+      fields,
+      edicts,
+    }
   }
 }
 
@@ -63,7 +66,11 @@ impl Dunestone {
 
     let integers = Dunestone::integers(&payload);
 
-    let Message { cenotaph, mut fields, mut edicts } = Message::from_integers(transaction, &integers);
+    let Message {
+      cenotaph,
+      mut fields,
+      mut edicts,
+    } = Message::from_integers(transaction, &integers);
 
     /* Ignore deadline
     let deadline = Tag::Deadline
@@ -71,13 +78,13 @@ impl Dunestone {
         .and_then(|deadline| u32::try_from(deadline).ok());*/
 
     let pointer = Tag::Pointer
-        .take(&mut fields)
-        .and_then(|default| u32::try_from(default).ok());
+      .take(&mut fields)
+      .and_then(|default| u32::try_from(default).ok());
 
     let divisibility = Tag::Divisibility
-        .take(&mut fields)
-        .and_then(|divisibility| u8::try_from(divisibility).ok())
-        .and_then(|divisibility| (divisibility <= MAX_DIVISIBILITY).then_some(divisibility));
+      .take(&mut fields)
+      .and_then(|divisibility| u8::try_from(divisibility).ok())
+      .and_then(|divisibility| (divisibility <= MAX_DIVISIBILITY).then_some(divisibility));
 
     let limit = Tag::Limit
       .take(&mut fields)
@@ -85,16 +92,12 @@ impl Dunestone {
 
     let dune = Tag::Dune.take(&mut fields).map(Dune);
 
-    let cap = Tag::Cap
-        .take(&mut fields)
-        .map(|cap| cap);
+    let cap = Tag::Cap.take(&mut fields).map(|cap| cap);
 
-    let premine = Tag::Premine
-        .take(&mut fields)
-        .map(|premine| premine);
+    let premine = Tag::Premine.take(&mut fields).map(|premine| premine);
 
     if premine.unwrap_or_default() > 0 {
-      edicts.push(Edict{
+      edicts.push(Edict {
         id: 0,
         amount: premine.unwrap_or_default(),
         output: 1,
@@ -102,27 +105,31 @@ impl Dunestone {
     }
 
     let spacers = Tag::Spacers
-        .take(&mut fields)
-        .and_then(|spacers| u32::try_from(spacers).ok())
-        .and_then(|spacers| (spacers <= MAX_SPACERS).then_some(spacers));
+      .take(&mut fields)
+      .and_then(|spacers| u32::try_from(spacers).ok())
+      .and_then(|spacers| (spacers <= MAX_SPACERS).then_some(spacers));
 
     let symbol = Tag::Symbol
-        .take(&mut fields)
-        .and_then(|symbol| u32::try_from(symbol).ok())
-        .and_then(char::from_u32);
+      .take(&mut fields)
+      .and_then(|symbol| u32::try_from(symbol).ok())
+      .and_then(char::from_u32);
 
     let height = (
-    Tag::HeightStart.take(&mut fields)
+      Tag::HeightStart
+        .take(&mut fields)
         .and_then(|start_height| u64::try_from(start_height).ok()),
-    Tag::HeightEnd.take(&mut fields)
-        .and_then(|end_height| u64::try_from(end_height).ok())
+      Tag::HeightEnd
+        .take(&mut fields)
+        .and_then(|end_height| u64::try_from(end_height).ok()),
     );
 
     let offset = (
-      Tag::OffsetStart.take(&mut fields)
-          .and_then(|start_offset| u64::try_from(start_offset).ok()),
-      Tag::OffsetEnd.take(&mut fields)
-          .and_then(|end_offset| u64::try_from(end_offset).ok())
+      Tag::OffsetStart
+        .take(&mut fields)
+        .and_then(|start_offset| u64::try_from(start_offset).ok()),
+      Tag::OffsetEnd
+        .take(&mut fields)
+        .and_then(|end_offset| u64::try_from(end_offset).ok()),
     );
 
     let mut flags = Tag::Flags.take(&mut fields).unwrap_or_default();
@@ -139,7 +146,7 @@ impl Dunestone {
       let limit = limit.unwrap_or_default();
       premine.checked_add(cap.checked_mul(limit)?)
     })()
-        .is_none();
+    .is_none();
 
     let etching = if etch {
       Some(Etching {
@@ -240,11 +247,11 @@ impl Dunestone {
     }
 
     let mut builder = script::Builder::new()
-        .push_opcode(opcodes::all::OP_RETURN)
-        .push_slice(b"D");
+      .push_opcode(opcodes::all::OP_RETURN)
+      .push_slice(b"D");
 
     for chunk in payload.chunks(bitcoin::blockdata::constants::MAX_SCRIPT_ELEMENT_SIZE) {
-      let push= chunk.try_into().unwrap();
+      let push = chunk.try_into().unwrap();
       builder = builder.push_slice(push);
     }
 
@@ -558,10 +565,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -589,10 +596,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -624,10 +631,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -659,10 +666,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -690,10 +697,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -720,10 +727,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -755,10 +762,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -791,10 +798,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -826,10 +833,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -861,10 +868,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -897,10 +904,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -934,10 +941,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -969,10 +976,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -1007,10 +1014,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -1041,17 +1048,17 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice::<&PushBytes>(varint::encode(2).as_slice().try_into().unwrap())
-              .push_slice::<&PushBytes>(varint::encode(4).as_slice().try_into().unwrap())
-              .push_slice::<&PushBytes>(varint::encode(1).as_slice().try_into().unwrap())
-              .push_slice::<&PushBytes>(varint::encode(5).as_slice().try_into().unwrap())
-              .push_slice::<&PushBytes>(varint::encode(0).as_slice().try_into().unwrap())
-              .push_slice::<&PushBytes>(varint::encode(1).as_slice().try_into().unwrap())
-              .push_slice::<&PushBytes>(varint::encode(2).as_slice().try_into().unwrap())
-              .push_slice::<&PushBytes>(varint::encode(3).as_slice().try_into().unwrap())
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice::<&PushBytes>(varint::encode(2).as_slice().try_into().unwrap())
+            .push_slice::<&PushBytes>(varint::encode(4).as_slice().try_into().unwrap())
+            .push_slice::<&PushBytes>(varint::encode(1).as_slice().try_into().unwrap())
+            .push_slice::<&PushBytes>(varint::encode(5).as_slice().try_into().unwrap())
+            .push_slice::<&PushBytes>(varint::encode(0).as_slice().try_into().unwrap())
+            .push_slice::<&PushBytes>(varint::encode(1).as_slice().try_into().unwrap())
+            .push_slice::<&PushBytes>(varint::encode(2).as_slice().try_into().unwrap())
+            .push_slice::<&PushBytes>(varint::encode(3).as_slice().try_into().unwrap())
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,
@@ -1089,10 +1096,10 @@ mod tests {
           },
           TxOut {
             script_pubkey: script::Builder::new()
-                .push_opcode(opcodes::all::OP_RETURN)
-                .push_slice(b"D")
-                .push_slice(payload)
-                .into_script(),
+              .push_opcode(opcodes::all::OP_RETURN)
+              .push_slice(b"D")
+              .push_slice(payload)
+              .into_script(),
             value: 0
           }
         ],
@@ -1122,17 +1129,17 @@ mod tests {
         output: vec![
           TxOut {
             script_pubkey: script::Builder::new()
-                .push_opcode(opcodes::all::OP_RETURN)
-                .push_slice(b"FOO")
-                .into_script(),
+              .push_opcode(opcodes::all::OP_RETURN)
+              .push_slice(b"FOO")
+              .into_script(),
             value: 0,
           },
           TxOut {
             script_pubkey: script::Builder::new()
-                .push_opcode(opcodes::all::OP_RETURN)
-                .push_slice(b"D")
-                .push_slice(payload)
-                .into_script(),
+              .push_opcode(opcodes::all::OP_RETURN)
+              .push_slice(b"D")
+              .push_slice(payload)
+              .into_script(),
             value: 0
           }
         ],
@@ -1160,10 +1167,10 @@ mod tests {
           etching,
           ..Default::default()
         }
-            .encipher()
-            .len()
-            - 1
-            - b"D".len(),
+        .encipher()
+        .len()
+          - 1
+          - b"D".len(),
         size
       );
     }
@@ -1216,7 +1223,7 @@ mod tests {
           height: 0,
           index: 0,
         }
-            .into(),
+        .into(),
         output: 0,
       }],
       Some(Etching {
@@ -1234,7 +1241,7 @@ mod tests {
           height: 0,
           index: 0,
         }
-            .into(),
+        .into(),
         output: 0,
       }],
       Some(Etching {
@@ -1252,7 +1259,7 @@ mod tests {
           height: 1_000_000,
           index: u16::max_value(),
         }
-            .into(),
+        .into(),
         output: 0,
       }],
       None,
@@ -1276,7 +1283,7 @@ mod tests {
           height: 1_000_000,
           index: u16::max_value(),
         }
-            .into(),
+        .into(),
         output: 0,
       }],
       None,
@@ -1291,7 +1298,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         },
         Edict {
@@ -1300,7 +1307,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         },
       ],
@@ -1316,7 +1323,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         },
         Edict {
@@ -1325,7 +1332,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         },
         Edict {
@@ -1334,7 +1341,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         },
       ],
@@ -1350,7 +1357,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         };
         4
@@ -1367,7 +1374,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         };
         5
@@ -1384,7 +1391,7 @@ mod tests {
             height: 0,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         };
         5
@@ -1401,7 +1408,7 @@ mod tests {
             height: 1_000_000,
             index: u16::max_value(),
           }
-              .into(),
+          .into(),
           output: 0,
         };
         5
@@ -1422,10 +1429,10 @@ mod tests {
         input: Vec::new(),
         output: vec![TxOut {
           script_pubkey: script::Builder::new()
-              .push_opcode(opcodes::all::OP_RETURN)
-              .push_slice(b"D")
-              .push_slice(payload)
-              .into_script(),
+            .push_opcode(opcodes::all::OP_RETURN)
+            .push_slice(b"D")
+            .push_slice(payload)
+            .into_script(),
           value: 0
         }],
         lock_time: locktime::absolute::LockTime::ZERO,

@@ -1,8 +1,8 @@
+use crate::subcommand::SubcommandResult;
 use {
   super::*,
   clap::builder::styling::{AnsiColor, Effects, Styles},
 };
-use crate::subcommand::SubcommandResult;
 
 #[derive(Debug, Parser)]
 #[command(

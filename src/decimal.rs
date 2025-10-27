@@ -11,13 +11,13 @@ impl Decimal {
     match divisibility.checked_sub(self.scale) {
       Some(difference) => Ok(
         self
-            .value
-            .checked_mul(
-              10u128
-                  .checked_pow(u32::from(difference))
-                  .context("divisibility out of range")?,
-            )
-            .context("amount out of range")?,
+          .value
+          .checked_mul(
+            10u128
+              .checked_pow(u32::from(difference))
+              .context("divisibility out of range")?,
+          )
+          .context("amount out of range")?,
       ),
       None => bail!("excessive precision"),
     }
@@ -70,12 +70,12 @@ impl FromStr for Decimal {
       };
 
       let scale = s
-          .trim_end_matches('0')
-          .chars()
-          .skip_while(|c| *c != '.')
-          .skip(1)
-          .count()
-          .try_into()?;
+        .trim_end_matches('0')
+        .chars()
+        .skip_while(|c| *c != '.')
+        .skip(1)
+        .count()
+        .try_into()?;
 
       Ok(Self {
         value: integer * 10u128.pow(u32::from(scale)) + decimal,
@@ -140,9 +140,9 @@ mod tests {
 
     assert_eq!(
       Decimal { value: 0, scale: 0 }
-          .to_amount(255)
-          .unwrap_err()
-          .to_string(),
+        .to_amount(255)
+        .unwrap_err()
+        .to_string(),
       "divisibility out of range"
     );
 

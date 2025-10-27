@@ -1,4 +1,4 @@
-use {boilerplate::Boilerplate, super::*};
+use {super::*, boilerplate::Boilerplate};
 pub(crate) use {
   block::BlockHashAndConfirmations,
   block::BlockHtml,

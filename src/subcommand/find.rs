@@ -22,9 +22,7 @@ impl Find {
     index.update()?;
 
     match index.find(self.sat)? {
-      Some(satpoint) => {
-        Ok(Box::new(Output { satpoint }))
-      }
+      Some(satpoint) => Ok(Box::new(Output { satpoint })),
       None => Err(anyhow!("sat has not been mined as of index height")),
     }
   }

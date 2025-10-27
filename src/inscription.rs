@@ -1,10 +1,10 @@
 use {
+  super::*,
   bitcoin::{
     blockdata::{opcodes, script},
     Script,
   },
   std::str,
-  super::*,
 };
 
 const PROTOCOL_ID: &[u8] = b"ord";

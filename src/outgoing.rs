@@ -1,5 +1,5 @@
-use crate::sat_point::SatPoint;
 use super::*;
+use crate::sat_point::SatPoint;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) enum Outgoing {
@@ -8,7 +8,6 @@ pub(crate) enum Outgoing {
   SatPoint(SatPoint),
   Dune { decimal: Decimal, dune: SpacedDune },
 }
-
 
 impl FromStr for Outgoing {
   type Err = Error;
@@ -70,7 +69,6 @@ impl FromStr for Outgoing {
     })
   }
 }
-
 
 #[cfg(test)]
 mod tests {

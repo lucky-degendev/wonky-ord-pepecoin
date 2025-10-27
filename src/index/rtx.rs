@@ -1,7 +1,4 @@
-use {
-  super::*,
-  bitcoin::hashes::{sha256d},
-};
+use {super::*, bitcoin::hashes::sha256d};
 
 pub(crate) struct Rtx<'a>(pub(crate) redb::ReadTransaction<'a>);
 
@@ -14,10 +11,8 @@ impl Rtx<'_> {
         .range(0..)?
         .rev()
         .next()
-        .map(|result| {
-          result.map(|(height, _hash)| Height(height.value()))
-        })
-        .transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E>
+        .map(|result| result.map(|(height, _hash)| Height(height.value())))
+        .transpose()?, // Converts Option<Result<T, E>> to Result<Option<T>, E>
     )
   }
 
@@ -37,30 +32,26 @@ impl Rtx<'_> {
     )
   }
 
-
   pub(crate) fn block_hash(&self, height: Option<u32>) -> Result<Option<BlockHash>> {
     let height_to_block_header = self.0.open_table(HEIGHT_TO_BLOCK_HASH)?;
 
-    Ok(
-      match height {
-        Some(height) => height_to_block_header.get(height)?
-          .map(|header| {
-            let block_hash_value = header.value().clone();
-            let sha256d_hash = sha256d::Hash::from_slice(&block_hash_value)
-              .expect("Invalid block hash");
-            BlockHash::from(sha256d_hash)
-          }),
-        None => height_to_block_header
-          .range(0..)?
-          .next_back()
-          .transpose()?
-          .map(|(_height, header)| {
-            let block_hash_value = header.value().clone();
-            let sha256d_hash = sha256d::Hash::from_slice(&block_hash_value)
-              .expect("Invalid block hash");
-            BlockHash::from(sha256d_hash)
-          }),
-      }
-    )
+    Ok(match height {
+      Some(height) => height_to_block_header.get(height)?.map(|header| {
+        let block_hash_value = header.value().clone();
+        let sha256d_hash =
+          sha256d::Hash::from_slice(&block_hash_value).expect("Invalid block hash");
+        BlockHash::from(sha256d_hash)
+      }),
+      None => height_to_block_header
+        .range(0..)?
+        .next_back()
+        .transpose()?
+        .map(|(_height, header)| {
+          let block_hash_value = header.value().clone();
+          let sha256d_hash =
+            sha256d::Hash::from_slice(&block_hash_value).expect("Invalid block hash");
+          BlockHash::from(sha256d_hash)
+        }),
+    })
   }
 }

@@ -1,5 +1,5 @@
-use bitcoin::PackedLockTime;
 use super::*;
+use bitcoin::PackedLockTime;
 
 #[derive(Debug, Parser)]
 pub(crate) struct Etch {
@@ -44,7 +44,7 @@ impl Etch {
     );
 
     let minimum_at_height =
-        Dune::minimum_at_height(options.chain(), Height(u32::try_from(count).unwrap() + 1));
+      Dune::minimum_at_height(options.chain(), Height(u32::try_from(count).unwrap() + 1));
 
     ensure!(
       dune >= minimum_at_height,
@@ -117,12 +117,11 @@ impl Etch {
     let unsigned_transaction = fund_raw_transaction(&client, self.fee_rate, &unfunded_transaction)?;
 
     let signed_transaction = client
-        .sign_raw_transaction_with_wallet(&unsigned_transaction, None, None)?
-        .hex;
+      .sign_raw_transaction_with_wallet(&unsigned_transaction, None, None)?
+      .hex;
 
     let transaction = client.send_raw_transaction(&signed_transaction)?;
 
     Ok(Box::new(Output { transaction }))
   }
 }
-

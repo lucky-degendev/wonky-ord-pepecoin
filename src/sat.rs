@@ -1,5 +1,5 @@
-use crate::decimal_sat::DecimalSat;
 use super::*;
+use crate::decimal_sat::DecimalSat;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Ord, PartialOrd, Deserialize, Serialize)]
 #[serde(transparent)]
@@ -12,7 +12,7 @@ impl Sat {
 
   pub(crate) fn height(self) -> Height {
     self.epoch().starting_height()
-        + u32::try_from(self.epoch_position() / self.epoch().subsidy()).unwrap()
+      + u32::try_from(self.epoch_position() / self.epoch().subsidy()).unwrap()
   }
 
   pub(crate) fn epoch(self) -> Epoch {

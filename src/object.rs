@@ -1,6 +1,6 @@
+use super::*;
 use crate::sat::Sat;
 use crate::sat_point::SatPoint;
-use super::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Object {

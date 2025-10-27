@@ -76,8 +76,8 @@ impl Dune {
 
 impl Serialize for Dune {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+  where
+    S: Serializer,
   {
     serializer.collect_str(self)
   }
@@ -85,8 +85,8 @@ impl Serialize for Dune {
 
 impl<'de> Deserialize<'de> for Dune {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+  where
+    D: Deserializer<'de>,
   {
     Ok(DeserializeFromStr::deserialize(deserializer)?.0)
   }
@@ -104,9 +104,9 @@ impl Display for Dune {
     while n > 0 {
       symbol.push(
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            .chars()
-            .nth(((n - 1) % 26) as usize)
-            .unwrap(),
+          .chars()
+          .nth(((n - 1) % 26) as usize)
+          .unwrap(),
       );
       n = (n - 1) / 26;
     }
@@ -132,8 +132,8 @@ impl FromStr for Dune {
       match c {
         'A'..='Z' => {
           x = x
-              .checked_add(c as u128 - 'A' as u128)
-              .ok_or_else(|| anyhow!("out of range"))?;
+            .checked_add(c as u128 - 'A' as u128)
+            .ok_or_else(|| anyhow!("out of range"))?;
         }
         _ => bail!("invalid character in dune name: {c}"),
       }
@@ -144,8 +144,8 @@ impl FromStr for Dune {
 
 #[cfg(test)]
 mod tests {
-  use bitcoin::blockdata::constants::COIN_VALUE;
   use super::*;
+  use bitcoin::blockdata::constants::COIN_VALUE;
 
   #[test]
   fn round_trip() {
@@ -321,7 +321,6 @@ mod tests {
     assert_eq!(serde_json::to_string(&dune).unwrap(), json);
     assert_eq!(serde_json::from_str::<Dune>(json).unwrap(), dune);
   }
-
 
   #[test]
   fn reserved() {
