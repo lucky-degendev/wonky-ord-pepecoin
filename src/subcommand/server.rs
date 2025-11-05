@@ -124,6 +124,7 @@ struct UtxoBalanceQuery {
   limit: Option<usize>,
   show_all: Option<bool>,
   value_filter: Option<u64>,
+  offset: Option<usize>,
 }
 
 #[derive(Deserialize)]
@@ -716,30 +717,22 @@ impl Server {
     let (address, page) = (address, page.unwrap_or(0));
     let show_all = query.show_all.unwrap_or(false);
     let value_filter = query.value_filter.unwrap_or(0);
-
-    let items_per_page = query.limit.unwrap_or(10);
-    let page = page as usize;
-    let start_index = if page == 0 || page == 1 {
-      0
-    } else {
-      (page - 1) * items_per_page + 1
-    };
-    let mut element_counter = 0;
-
+    let items_per_page = query.limit.unwrap_or(10).max(1);
     let mut all_inscriptions_json = Vec::new();
     let outpoints: Vec<OutPoint> = index.get_account_outputs(address)?;
+    let mut total_inscriptions: usize = 0;
+    let mut collected: usize = 0;
 
-    for outpoint in outpoints {
+    let mut offset = query.offset.unwrap_or(0);
+    if page > 1 {
+      let page_offset = (page - 1) as usize * items_per_page;
+      offset = offset.saturating_add(page_offset);
+    }
+
+    'outpoints: for outpoint in outpoints {
       let inscriptions = index.get_inscriptions_on_output(outpoint)?;
 
       if inscriptions.is_empty() {
-        continue;
-      }
-
-      element_counter += 1;
-      if !show_all
-        && (element_counter < start_index || element_counter > start_index + items_per_page - 1)
-      {
         continue;
       }
 
@@ -757,7 +750,6 @@ impl Server {
       let script = output.script_pubkey;
 
       if value_filter > 0 && shibes <= value_filter {
-        element_counter -= 1;
         continue;
       }
 
@@ -791,10 +783,20 @@ impl Server {
         if let Some(content) = str_content.clone() {
           let drc20 = DRC20::from_json_string(content.as_str());
           if drc20.is_some() {
-            element_counter -= 1;
             continue;
           }
         };
+
+        total_inscriptions += 1;
+
+        if !show_all {
+          if total_inscriptions <= offset {
+            continue;
+          }
+          if collected >= items_per_page {
+            continue;
+          }
+        }
 
         let confirmations = if let Some(block_hash_info) = index.get_transaction_blockhash(txid)? {
           block_hash_info.confirmations
@@ -821,12 +823,13 @@ impl Server {
         };
 
         all_inscriptions_json.push(inscription_json);
+        collected += 1;
       }
     }
     Ok(
       Json(InscriptionAddressJson {
         inscriptions: all_inscriptions_json,
-        total_inscriptions: element_counter,
+        total_inscriptions,
       })
       .into_response(),
     )
