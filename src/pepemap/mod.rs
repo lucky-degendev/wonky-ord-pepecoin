@@ -18,10 +18,16 @@ pub struct PepemapEntry {
 pub fn parse_number(inscription: &Inscription) -> Option<u32> {
   let body = inscription.body()?;
   let body_str = std::str::from_utf8(body).ok()?.trim();
-  let Some(number_str) = body_str.strip_suffix(SUFFIX) else {
+  if body_str.is_empty() {
     return None;
-  };
+  }
 
+  let (number_part, suffix) = body_str.rsplit_once('.')?;
+  if !suffix.eq_ignore_ascii_case(SUFFIX.trim_start_matches('.')) {
+    return None;
+  }
+
+  let number_str = number_part.trim();
   if number_str.is_empty() {
     return None;
   }
@@ -32,4 +38,27 @@ pub fn parse_number(inscription: &Inscription) -> Option<u32> {
   }
 
   Some(number)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parse_number_supports_uppercase_suffix() {
+    let inscription = Inscription::new(None, Some(b"123.PEPEMAP".to_vec()));
+    assert_eq!(parse_number(&inscription), Some(123));
+  }
+
+  #[test]
+  fn parse_number_trims_whitespace() {
+    let inscription = Inscription::new(None, Some(b" 456 .pepemap \n".to_vec()));
+    assert_eq!(parse_number(&inscription), Some(456));
+  }
+
+  #[test]
+  fn parse_number_rejects_invalid_suffix() {
+    let inscription = Inscription::new(None, Some(b"789.invalid".to_vec()));
+    assert_eq!(parse_number(&inscription), None);
+  }
 }
